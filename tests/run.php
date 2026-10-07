@@ -550,6 +550,18 @@ test('pay button renders signed forms and both options', function () {
     eq('', bachs_link($GLOBALS['__gateway'] + ['invoiceid' => $inv]), 'no button on paid invoice');
 });
 
+test('ineligible auto-pay explains why to admins only', function () {
+    setup();
+    $hid = Capsule::table('tblhosting')->insertGetId(['userid' => 1, 'packageid' => 1, 'billingcycle' => 'Monthly', 'amount' => 15000]);
+    $inv = bachs_test_invoice(1, [['type' => 'Hosting', 'relid' => $hid, 'amount' => 15000]]);
+    $html = bachs_link($GLOBALS['__gateway'] + ['invoiceid' => $inv]);
+    check(strpos($html, 'auto-renew') === false, 'client sees nothing');
+    $_SESSION['adminid'] = 1;
+    $html = bachs_link($GLOBALS['__gateway'] + ['invoiceid' => $inv]);
+    unset($_SESSION['adminid']);
+    check(strpos($html, 'USD only') !== false, 'admin sees reason: ' . strip_tags($html));
+});
+
 test('refunds: full and partial', function () {
     list($cfg, $fake, $api) = setup();
     $inv = bachs_test_invoice(1, [['type' => 'Item', 'amount' => 15000]]);

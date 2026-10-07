@@ -110,7 +110,10 @@ CLI tools:
 php modules/gateways/bachs/cron.php reconcile          # run now, verbose
 php modules/gateways/bachs/cron.php status             # last run, pending/error counts
 php modules/gateways/bachs/cron.php verify 1234        # re-verify invoice #1234
+php modules/gateways/bachs/cron.php autopay-check 1234 # explain why auto-renew is / isn't offered
 ```
+
+When an admin uses **Login as Client** and opens an invoice that doesn't qualify for auto-renew, a yellow *[Admin only]* line under Pay Now gives the reason. Clients never see it.
 
 Admins also get a **Re-check Bachs payment** button on any invoice that has Bachs checkouts.
 

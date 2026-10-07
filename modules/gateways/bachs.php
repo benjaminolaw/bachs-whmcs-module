@@ -245,7 +245,13 @@ function bachs_link($params)
                 $html .= '<p class="small text-muted" style="margin-top:6px">Auto-renew saves your card with Bachs and charges '
                     . $e($charge) . ' ' . $e(\HarmonWeb\Bachs\BillingCycle::label($quote['cadence']))
                     . '. Cancel any time from your client area.</p>';
+            } elseif (!empty($_SESSION['adminid'])) {
+                // Only staff (e.g. "Login as Client") see why auto-pay is not offered.
+                $html .= '<p class="small text-warning" style="margin-top:6px">[Admin only] Auto-renew not offered: '
+                    . $e($quote['reason'] ?? 'not eligible') . '</p>';
             }
+        } elseif (!empty($_SESSION['adminid'])) {
+            $html .= '<p class="small text-warning" style="margin-top:6px">[Admin only] Auto-renew not offered: "Enable Card Auto-Pay" is off in the gateway settings.</p>';
         }
         $html .= '</div>';
         return $html;

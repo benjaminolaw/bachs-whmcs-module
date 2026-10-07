@@ -5,6 +5,7 @@
  *   php modules/gateways/bachs/cron.php reconcile          run the payment validation pass now
  *   php modules/gateways/bachs/cron.php status             show last run + pending counts
  *   php modules/gateways/bachs/cron.php verify <invoiceid> re-verify one invoice
+ *   php modules/gateways/bachs/cron.php autopay-check <id> explain whether auto-renew is offered
  *   php modules/gateways/bachs/cron.php register-webhook   create the webhook endpoint at Bachs
  *
  * Reconciliation already runs with the WHMCS cron via includes/hooks/bachs.php;
@@ -65,6 +66,25 @@ switch ($command) {
         }
         exit(0);
 
+    case 'autopay-check':
+        $invoiceId = (int) ($argv[2] ?? 0);
+        $invoice = $invoiceId ? \HarmonWeb\Bachs\Whmcs::invoice($invoiceId) : null;
+        if (!$invoice) {
+            fwrite(STDERR, "Usage: cron.php autopay-check <invoiceid>\n");
+            exit(2);
+        }
+        $out(sprintf('Invoice #%d: status %s, balance %s %s', $invoice->id, $invoice->status, $invoice->balance, $invoice->currency_code));
+        foreach (Capsule::table('tblinvoiceitems')->where('invoiceid', $invoiceId)->get() as $line) {
+            $out(sprintf('  line: type=%s relid=%d amount=%s  %s', $line->type, $line->relid, $line->amount, mb_substr($line->description, 0, 60)));
+        }
+        $quote = (new \HarmonWeb\Bachs\CheckoutService($config, $api))->quoteSubscription($invoice);
+        if (!empty($quote['eligible'])) {
+            $out('ELIGIBLE: auto-renew would charge ' . $quote['currency'] . ' ' . $quote['amount'] . ' ' . \HarmonWeb\Bachs\BillingCycle::label($quote['cadence']));
+        } else {
+            $out('NOT ELIGIBLE: ' . ($quote['reason'] ?? 'unknown'));
+        }
+        exit(0);
+
     case 'status':
         $out('Last reconcile: ' . (Store::kvGet('last_reconcile') ?: 'never'));
         foreach (['open', 'underpaid', 'error', 'mismatch'] as $s) {
@@ -101,6 +121,6 @@ switch ($command) {
         exit(0);
 
     default:
-        fwrite(STDERR, "Unknown command. Use: reconcile | status | verify <invoiceid> | register-webhook\n");
+        fwrite(STDERR, "Unknown command. Use: reconcile | status | verify <invoiceid> | autopay-check <invoiceid> | register-webhook\n");
         exit(2);
 }
